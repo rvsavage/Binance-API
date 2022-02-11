@@ -27,8 +27,8 @@ function Show-BinanceCurrentTrade
                 }
         
         Write-Host "Entry Price (Inc Fees): $($CurrentPosition.EntryPriceIncFees) $($CurrentPosition.QuoteAsset) " -ForegroundColor Gray -NoNewline
-        Write-Host "Low Sell Price: $($CurrentPosition.LowSellPrice) $($CurrentPosition.QuoteAsset) ($($CurrentPosition.LowSellPriceGap) $($CurrentPosition.QuoteAsset)) " -ForegroundColor Yellow -NoNewline
-        Write-Host "High Sell Price: $($CurrentPosition.HighSellPrice) $($CurrentPosition.QuoteAsset) ($($CurrentPosition.HighSellPriceGap) $($CurrentPosition.QuoteAsset)) " -ForegroundColor Cyan -NoNewline
+        Write-Host "Low Sell Price: $($CurrentPosition.LowerQuotePrice) $($CurrentPosition.QuoteAsset) ($($CurrentPosition.LowerQuotePriceGap) $($CurrentPosition.QuoteAsset)) " -ForegroundColor Yellow -NoNewline
+        Write-Host "High Sell Price: $($CurrentPosition.UpperQuotePrice) $($CurrentPosition.QuoteAsset) ($($CurrentPosition.UpperQuotePriceGap) $($CurrentPosition.QuoteAsset)) " -ForegroundColor Cyan -NoNewline
 
         Write-Host "Profit: " -NoNewline
 
@@ -51,7 +51,16 @@ function Show-BinanceCurrentTrade
         Write-Host "##################### TRADE DETAILS #####################" -ForegroundColor Yellow
         Write-Host ""
         Write-Host "Date                  : $($CurrentPosition.Date)"
-        Write-Host "Exit Strategy         : $($CurrentPosition.Strategy)"
+        
+        if ($CurrentPosition.Strategy -eq "Min\Max Profit")
+        {
+            Write-Host "Exit Strategy         : $($CurrentPosition.Strategy) ($($CurrentPosition.ProfitLow) / $($CurrentPosition.ProfitHigh))"
+        }
+        else
+        {
+            Write-Host "Exit Strategy         : $($CurrentPosition.Strategy)"
+        }
+        
         Write-Host "Market                : $($CurrentPosition.Market)"
         Write-Host "Quantity              : $($CurrentPosition.Quantity)"
 
@@ -76,10 +85,10 @@ function Show-BinanceCurrentTrade
                 }
 
         Write-Host "Low Sell Price        : " -NoNewline
-        Write-Host "$($CurrentPosition.LowSellPrice) $($CurrentPosition.QuoteAsset) ($($CurrentPosition.LowSellPriceGap) $($CurrentPosition.QuoteAsset))" -ForegroundColor Yellow
+        Write-Host "$($CurrentPosition.LowerQuotePrice) $($CurrentPosition.QuoteAsset) ($($CurrentPosition.LowerQuotePriceGap) $($CurrentPosition.QuoteAsset))" -ForegroundColor Yellow
 
         Write-Host "High Sell Price       : " -NoNewline
-        Write-Host "$($CurrentPosition.HighSellPrice) $($CurrentPosition.QuoteAsset) ($($CurrentPosition.HighSellPriceGap) $($CurrentPosition.QuoteAsset))" -ForegroundColor Cyan
+        Write-Host "$($CurrentPosition.UpperQuotePrice) $($CurrentPosition.QuoteAsset) ($($CurrentPosition.UpperQuotePriceGap) $($CurrentPosition.QuoteAsset))" -ForegroundColor Cyan
 
         Write-Host "Profit                : " -NoNewline
 

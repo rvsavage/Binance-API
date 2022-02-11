@@ -8,10 +8,10 @@ function Submit-BinanceTradingStrategy
         [Parameter(Mandatory=$false)][long]$ExistingOrderId,
         [Parameter(Mandatory=$false)][Decimal]$EntryPrice,
         [Parameter(Mandatory=$false)][Decimal]$Quantity,
-        [Parameter(Mandatory=$false)][Decimal]$LowerPriceUSD,
-        [Parameter(Mandatory=$false)][Decimal]$UpperPriceUSD,
-        [Parameter(Mandatory=$false)][Decimal]$ProfitLowUSD,
-        [Parameter(Mandatory=$false)][Decimal]$ProfitHighUSD,
+        [Parameter(Mandatory=$false)][Decimal]$LowerQuotePrice,
+        [Parameter(Mandatory=$false)][Decimal]$UpperQuotePrice,
+        [Parameter(Mandatory=$false)][Decimal]$ProfitLow,
+        [Parameter(Mandatory=$false)][Decimal]$ProfitHigh,
         [Parameter(Mandatory=$false)][switch]$Simulation,
         [Parameter(Mandatory=$false)][string]$Format = "Table",
         [Parameter(Mandatory=$false)][decimal]$FeePercentage = 0.08
@@ -29,14 +29,14 @@ function Submit-BinanceTradingStrategy
     }
         
     $StrategyParamBit = 0
-    if ($LowerPriceUSD -ne 0) { $StrategyParamBit = $StrategyParamBit + 1 }
-    if ($UpperPriceUSD -ne 0) { $StrategyParamBit = $StrategyParamBit + 2 }
-    if ($ProfitLowUSD  -ne 0) { $StrategyParamBit = $StrategyParamBit + 4 }
-    if ($ProfitHighUSD -ne 0) { $StrategyParamBit = $StrategyParamBit + 8 }
+    if ($LowerQuotePrice -ne 0) { $StrategyParamBit = $StrategyParamBit + 1 }
+    if ($UpperQuotePrice -ne 0) { $StrategyParamBit = $StrategyParamBit + 2 }
+    if ($ProfitLow  -ne 0) { $StrategyParamBit = $StrategyParamBit + 4 }
+    if ($ProfitHigh -ne 0) { $StrategyParamBit = $StrategyParamBit + 8 }
     
     if ($StrategyParamBit -ne 3 -and $StrategyParamBit -ne 12)
     {
-        Write-Host "Error: You need to provide a value for either 'LowerPriceUSD' and 'UpperPriceUSD', or 'ProfitLowUSD' and 'ProfitHighUSD'." -ForegroundColor Magenta
+        Write-Host "Error: You need to provide a value for either 'LowerQuotePrice' and 'UpperQuotePrice', or 'ProfitLow' and 'ProfitHigh'." -ForegroundColor Magenta
         return
     }
 
@@ -69,7 +69,7 @@ function Submit-BinanceTradingStrategy
     {
         [Decimal]$CurrentPrice = (Get-BinanceCurrentPrices -Market $Market).Price
         [Decimal]$Fees = ($EntryPrice * ($FeePercentage / 100) * $Quantity) + ($CurrentPrice * ($FeePercentage / 100) * $Quantity)
-        [Decimal]$Profit = ($CurrentPrice - ($EntryPrice + $Fees)) * $Quantity
+        [Decimal]$Profit = (($CurrentPrice - $EntryPrice) * $Quantity) - $Fees
         
         if ($StrategyParamBit -eq 3)
         {
@@ -79,8 +79,8 @@ function Submit-BinanceTradingStrategy
         if ($StrategyParamBit -eq 12)
         {
             $ExitStrategy = "Min\Max Profit"
-            $LowerPriceUSD = $EntryPrice + $Fees + ($ProfitLowUSD / $Quantity)
-            $UpperPriceUSD = $EntryPrice + $Fees + ($ProfitHighUSD / $Quantity)
+            $LowerQuotePrice = $EntryPrice + ($Fees / $Quantity) + ($ProfitLow / $Quantity)
+            $UpperQuotePrice = $EntryPrice + ($Fees / $Quantity) + ($ProfitHigh / $Quantity)
         }
 
         $obj = [PSCustomObject]@{
@@ -94,12 +94,14 @@ function Submit-BinanceTradingStrategy
             LastPrice = [math]::Round($LastPrice,$Rounding)
             PriceMove = [math]::Round($CurrentPrice - $LastPrice,$Rounding)
             EntryPrice = [math]::Round($EntryPrice,$Rounding)
-            EntryPriceIncFees = [math]::Round($EntryPrice + $Fees,$Rounding)
-            LowSellPrice = [math]::Round($LowerPriceUSD,$Rounding)
+            EntryPriceIncFees = [math]::Round($EntryPrice + ($Fees/$Quantity),$Rounding)
+            LowerQuotePrice = [math]::Round($LowerQuotePrice,$Rounding)
             Quantity = $Quantity
-            LowSellPriceGap = [math]::Round($CurrentPrice - $LowerPriceUSD,$Rounding)
-            HighSellPrice = [math]::Round($UpperPriceUSD,$Rounding)
-            HighSellPriceGap = [math]::Round($UpperPriceUSD - $CurrentPrice,$Rounding)
+            ProfitLow = $ProfitLow
+            ProfitHigh = $ProfitHigh
+            LowerQuotePriceGap = [math]::Round($CurrentPrice - $LowerQuotePrice,$Rounding)
+            UpperQuotePrice = [math]::Round($UpperQuotePrice,$Rounding)
+            UpperQuotePriceGap = [math]::Round($UpperQuotePrice - $CurrentPrice,$Rounding)
             Profit = [math]::Round($Profit,$Rounding)
             LastProfit = [math]::Round($LastProfit,$Rounding)
             ProfitMove = [math]::Round($Profit,$Rounding) - [math]::Round($LastProfit,$Rounding)
@@ -111,7 +113,7 @@ function Submit-BinanceTradingStrategy
         # Write Position Summary
         Show-BinanceCurrentTrade -CurrentPosition $CurrentPosition -Format $Format
 
-        if (($CurrentPosition.CurrentPrice -le $CurrentPosition.LowSellPrice -or $CurrentPosition.CurrentPrice -ge $CurrentPosition.HighSellPrice) -and -not([string]::IsNullOrEmpty($CurrentPrice)))
+        if (($CurrentPrice -le $LowerQuotePrice -or $CurrentPrice -ge $UpperQuotePrice) -and -not([string]::IsNullOrEmpty($CurrentPrice)))
         {
             if ($Simulation)
             {
